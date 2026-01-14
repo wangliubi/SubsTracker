@@ -71,6 +71,18 @@ function getTimezoneMidnightTimestamp(date, timezone = 'UTC') {
   return Date.UTC(year, month - 1, day, 0, 0, 0);
 }
 
+function calculateExpirationTime(expirationMinutes, timezone = 'UTC') {
+  const currentTime = getCurrentTimeInTimezone(timezone);
+  const expirationTime = new Date(currentTime.getTime() + (expirationMinutes * 60 * 1000));
+  return expirationTime;
+}
+
+function isExpired(targetTime, timezone = 'UTC') {
+  const currentTime = getCurrentTimeInTimezone(timezone);
+  const target = new Date(targetTime);
+  return currentTime > target;
+}
+
 function formatTimeInTimezone(time, timezone = 'UTC', format = 'full') {
   try {
     const date = new Date(time);
@@ -204,27 +216,21 @@ function isValidTimezone(timezone) {
 const lunarCalendar = {
   // 农历数据 (1900-2100年)
   lunarInfo: [
-    0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2, // 1900-1909
-    0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977, // 1910-1919
-    0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970, // 1920-1929
-    0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950, // 1930-1939
-    0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557, // 1940-1949
-    0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0, // 1950-1959
-    0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0, // 1960-1969
-    0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, // 1970-1979
-    0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570, // 1980-1989
-    0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0, // 1990-1999
-    0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5, // 2000-2009
-    0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930, // 2010-2019
-    0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530, // 2020-2029
-    0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45, // 2030-2039
-    0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0, // 2040-2049
-    0x14b63, 0x09370, 0x14a38, 0x04970, 0x064b0, 0x168a6, 0x0ea50, 0x1a978, 0x16aa0, 0x0a6c0, // 2050-2059 (修正2057: 0x1a978)
-    0x0aa60, 0x16d63, 0x0d260, 0x0d950, 0x0d554, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, // 2060-2069
-    0x025d0, 0x092d0, 0x0cab5, 0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, // 2070-2079
-    0x15176, 0x052b0, 0x0a930, 0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, // 2080-2089
-    0x0d260, 0x0ea65, 0x0d530, 0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x1a4bb, 0x0a4d0, 0x0d0b0, // 2090-2099 (修正2099: 0x0d0b0)
-    0x0d250 // 2100
+    0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
+    0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977,
+    0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970,
+    0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950,
+    0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557,
+    0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0,
+    0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0,
+    0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6,
+    0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570,
+    0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0,
+    0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5,
+    0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930,
+    0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530,
+    0x05aa0, 0x076a3, 0x096d0, 0x04bd7, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45,
+    0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0
   ],
 
   // 天干地支
@@ -270,8 +276,8 @@ const lunarCalendar = {
   solar2lunar: function(year, month, day) {
     if (year < 1900 || year > 2100) return null;
 
-    const baseDate = Date.UTC(1900, 0, 31);
-    const objDate = Date.UTC(year, month - 1, day);
+    const baseDate = new Date(1900, 0, 31);
+    const objDate = new Date(year, month - 1, day);
     //let offset = Math.floor((objDate - baseDate) / 86400000);
     let offset = Math.round((objDate - baseDate) / 86400000);
 
@@ -849,9 +855,6 @@ const adminPage = `
           <span id="systemTimeDisplay" class="ml-4 text-base text-indigo-600 font-normal"></span>
         </div>
         <div class="flex items-center space-x-4">
-          <a href="/admin/dashboard" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-chart-line mr-1"></i>仪表盘
-          </a>
           <a href="/admin" class="text-indigo-600 border-b-2 border-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
             <i class="fas fa-list mr-1"></i>订阅列表
           </a>
@@ -903,25 +906,22 @@ const adminPage = `
         <table class="w-full divide-y divide-gray-200 responsive-table">
           <thead class="bg-gray-50">
             <tr>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 23%;">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 25%;">
                 名称
               </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 13%;">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 15%;">
                 类型
               </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 18%;">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 20%;">
                 到期时间 <i class="fas fa-sort-up ml-1 text-indigo-500" title="按到期时间升序排列"></i>
               </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 10%;">
-                金额
-              </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 13%;">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 15%;">
                 提醒设置
               </th>
               <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 10%;">
                 状态
               </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 13%;">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 15%;">
                 操作
               </th>
             </tr>
@@ -958,83 +958,20 @@ const adminPage = `
           
           <div>
             <label for="customType" class="block text-sm font-medium text-gray-700 mb-1">订阅类型</label>
-            <input type="text" id="customType" list="customTypeList" placeholder="选择或输入自定义类型"
+            <input type="text" id="customType" placeholder="例如：流媒体、云服务、软件、生日等"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-            <datalist id="customTypeList">
-              <option value="流媒体">
-              <option value="视频平台">
-              <option value="音乐平台">
-              <option value="云服务">
-              <option value="软件订阅">
-              <option value="域名">
-              <option value="服务器">
-              <option value="会员服务">
-              <option value="学习平台">
-              <option value="健身/运动">
-              <option value="游戏">
-              <option value="新闻/杂志">
-              <option value="生日">
-              <option value="纪念日">
-              <option value="其他">
-            </datalist>
             <div class="error-message text-red-500"></div>
           </div>
 
           <div>
             <label for="category" class="block text-sm font-medium text-gray-700 mb-1">分类标签</label>
-            <input type="text" id="category" list="categoryList" placeholder="选择或输入自定义标签"
+            <input type="text" id="category" placeholder="例如：个人、家庭、公司"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-            <datalist id="categoryList">
-              <option value="个人">
-              <option value="家庭">
-              <option value="工作">
-              <option value="公司">
-              <option value="娱乐">
-              <option value="学习">
-              <option value="开发">
-              <option value="生产力">
-              <option value="社交">
-              <option value="健康">
-              <option value="财务">
-            </datalist>
-            <p class="mt-1 text-xs text-gray-500">可输入多个标签并使用"/"分隔，便于筛选和统计</p>
+            <p class="mt-1 text-xs text-gray-500">可输入多个标签并使用“/”分隔，便于筛选和统计</p>
             <div class="error-message text-red-500"></div>
           </div>
         </div>
-
-        <!-- 金额 -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            费用设置
-            <span class="text-gray-400 text-xs ml-1">可选</span>
-          </label>
-          <div class="flex space-x-2">
-            <div class="w-1/3">
-              <select id="currency" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                <option value="CNY" selected>CNY (¥)</option>
-                <option value="USD">USD ($)</option>
-                <option value="HKD">HKD (HK$)</option>
-                <option value="TWD">TWD (NT$)</option>
-                <option value="JPY">JPY (¥)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="KRW">KRW (₩)</option>
-              </select>
-            </div>
-            <div class="relative w-2/3">
-              <input
-                type="number"
-                id="amount"
-                step="0.01"
-                min="0"
-                placeholder="例如: 15.00"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-          </div>
-          <p class="mt-1 text-xs text-gray-500">用于统计支出和生成仪表盘</p>
-        </div>
-
+        
         <div class="mb-4 flex items-center space-x-6">
           <label class="lunar-toggle">
             <input type="checkbox" id="showLunar" class="form-checkbox h-4 w-4 text-indigo-600">
@@ -1315,31 +1252,60 @@ const adminPage = `
   </div>
 
   <script>
+    // 兼容性函数 - 保持原有接口
+    function formatBeijingTime(date = new Date(), format = 'full') {
+      try {
+        const timezone = 'Asia/Shanghai';
+        const dateObj = new Date(date);
+        
+        if (format === 'date') {
+          return dateObj.toLocaleDateString('zh-CN', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+        } else if (format === 'datetime') {
+          return dateObj.toLocaleString('zh-CN', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+        } else {
+          // full format
+          return dateObj.toLocaleString('zh-CN', {
+            timeZone: timezone
+          });
+        }
+      } catch (error) {
+        console.error('时间格式化错误: ' + error.message);
+        return new Date(date).toISOString();
+      }
+    }
+
     // 农历转换工具函数 - 前端版本
     const lunarCalendar = {
       // 农历数据 (1900-2100年)
       lunarInfo: [
-        0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2, // 1900-1909
-        0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977, // 1910-1919
-        0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970, // 1920-1929
-        0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950, // 1930-1939
-        0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557, // 1940-1949
-        0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0, // 1950-1959
-        0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0, // 1960-1969
-        0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, // 1970-1979
-        0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570, // 1980-1989
-        0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0, // 1990-1999
-        0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5, // 2000-2009
-        0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930, // 2010-2019
-        0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530, // 2020-2029
-        0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45, // 2030-2039
-        0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0, // 2040-2049
-        0x14b63, 0x09370, 0x14a38, 0x04970, 0x064b0, 0x168a6, 0x0ea50, 0x1a978, 0x16aa0, 0x0a6c0, // 2050-2059 (修正2057: 0x1a978)
-        0x0aa60, 0x16d63, 0x0d260, 0x0d950, 0x0d554, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, // 2060-2069
-        0x025d0, 0x092d0, 0x0cab5, 0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, // 2070-2079
-        0x15176, 0x052b0, 0x0a930, 0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, // 2080-2089
-        0x0d260, 0x0ea65, 0x0d530, 0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x1a4bb, 0x0a4d0, 0x0d0b0, // 2090-2099 (修正2099: 0x0d0b0)
-        0x0d250 // 2100
+        0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
+        0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977,
+        0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970,
+        0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950,
+        0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557,
+        0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0,
+        0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0,
+        0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6,
+        0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570,
+        0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0,
+        0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5,
+        0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930,
+        0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530,
+        0x05aa0, 0x076a3, 0x096d0, 0x04bd7, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45,
+        0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0
       ],
 
       // 天干地支
@@ -1385,8 +1351,8 @@ const adminPage = `
       solar2lunar: function(year, month, day) {
         if (year < 1900 || year > 2100) return null;
 
-        const baseDate = Date.UTC(1900, 0, 31);
-        const objDate = Date.UTC(year, month - 1, day);
+        const baseDate = new Date(1900, 0, 31);
+        const objDate = new Date(year, month - 1, day);
         //let offset = Math.floor((objDate - baseDate) / 86400000);
         let offset = Math.round((objDate - baseDate) / 86400000);
 
@@ -1557,13 +1523,8 @@ const lunarBiz = {
         return;
       }
 
-      // 【修复】直接解析字符串 "YYYY-MM-DD"，避免 new Date() 带来的时区偏移导致日期少一天
-      const parts = dateInput.value.split('-');
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-      const day = parseInt(parts[2], 10);
-      
-      const lunar = lunarCalendar.solar2lunar(year, month, day);
+      const date = new Date(dateInput.value);
+      const lunar = lunarCalendar.solar2lunar(date.getFullYear(), date.getMonth() + 1, date.getDate());
 
       if (lunar) {
         lunarDisplay.textContent = '农历：' + lunar.fullStr;
@@ -1952,32 +1913,14 @@ const lunarBiz = {
         let lunarExpiryText = '';
         let startLunarText = '';
         if (showLunar) {
-          // 【修复】列表显示农历时，直接解析字符串年月日，避免 new Date() 时区偏移导致少一天
-          const getLunarParts = (dateStr) => {
-            if (!dateStr) return null;
-            // 兼容 ISO 格式 (2025-07-25T00:00:00.000Z) 和 普通日期格式 (2025-07-25)
-            const datePart = dateStr.split('T')[0]; 
-            const parts = datePart.split('-');
-            if (parts.length !== 3) return null;
-            return {
-              y: parseInt(parts[0], 10),
-              m: parseInt(parts[1], 10),
-              d: parseInt(parts[2], 10)
-            };
-          };
-
-          const expiryParts = getLunarParts(subscription.expiryDate);
-          if (expiryParts) {
-             const lunarExpiry = lunarCalendar.solar2lunar(expiryParts.y, expiryParts.m, expiryParts.d);
-             lunarExpiryText = lunarExpiry ? lunarExpiry.fullStr : '';
-          }
+          const expiryDateObj = new Date(subscription.expiryDate);
+          const lunarExpiry = lunarCalendar.solar2lunar(expiryDateObj.getFullYear(), expiryDateObj.getMonth() + 1, expiryDateObj.getDate());
+          lunarExpiryText = lunarExpiry ? lunarExpiry.fullStr : '';
 
           if (subscription.startDate) {
-            const startParts = getLunarParts(subscription.startDate);
-            if (startParts) {
-               const lunarStart = lunarCalendar.solar2lunar(startParts.y, startParts.m, startParts.d);
-               startLunarText = lunarStart ? lunarStart.fullStr : '';
-            }
+            const startDateObj = new Date(subscription.startDate);
+            const lunarStart = lunarCalendar.solar2lunar(startDateObj.getFullYear(), startDateObj.getMonth() + 1, startDateObj.getDate());
+            startLunarText = lunarStart ? lunarStart.fullStr : '';
           }
         }
 
@@ -2046,19 +1989,6 @@ const lunarBiz = {
           : (reminder.unit === 'hour' ? '<div class="text-xs text-gray-500 mt-1">小时级提醒</div>' : '');
         const reminderHtml = '<div><i class="fas fa-bell mr-1"></i>' + reminder.displayText + '</div>' + reminderExtra;
 
-        const currencySymbols = {
-          'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'TWD': 'NT$', 
-          'JPY': '¥', 'EUR': '€', 'GBP': '£', 'KRW': '₩'
-        };
-        const currencySymbol = currencySymbols[subscription.currency] || '¥';
-
-        const amountHtml = subscription.amount
-          ? '<div class="flex items-center gap-1">' +
-              '<span class="text-xs text-gray-500 font-bold">' + currencySymbol + '</span>' +
-              '<span class="text-sm font-medium text-gray-900">' + subscription.amount.toFixed(2) + '</span>' +
-            '</div>'
-          : '<span class="text-xs text-gray-400">未设置</span>';
-
         row.innerHTML =
           '<td data-label="名称" class="px-4 py-3"><div class="td-content-wrapper">' +
             nameHtml +
@@ -2079,9 +2009,6 @@ const lunarBiz = {
             '<div class="text-xs text-gray-500 mt-1">' + daysLeftText + '</div>' +
             startDateHtml +
           '</div></td>' +
-          '<td data-label="金额" class="px-4 py-3"><div class="td-content-wrapper">' +
-            amountHtml +
-          '</div></td>' +
           '<td data-label="提醒设置" class="px-4 py-3"><div class="td-content-wrapper">' +
             reminderHtml +
           '</div></td>' +
@@ -2089,9 +2016,7 @@ const lunarBiz = {
           '<td data-label="操作" class="px-4 py-3">' +
             '<div class="action-buttons-wrapper">' +
               '<button class="edit btn-primary text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '"><i class="fas fa-edit mr-1"></i>编辑</button>' +
-              '<button class="view-history bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '" title="查看支付历史"><i class="fas fa-history mr-1"></i>历史</button>' +
               '<button class="test-notify btn-info text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '"><i class="fas fa-paper-plane mr-1"></i>测试</button>' +
-              '<button class="renew-now btn-success text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '" title="立即续订一个周期"><i class="fas fa-sync-alt mr-1"></i>续订</button>' +
               '<button class="delete btn-danger text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '"><i class="fas fa-trash-alt mr-1"></i>删除</button>' +
               (subscription.isActive
                 ? '<button class="toggle-status btn-warning text-white px-2 py-1 rounded text-xs whitespace-nowrap" data-id="' + subscription.id + '" data-action="deactivate"><i class="fas fa-pause-circle mr-1"></i>停用</button>'
@@ -2116,14 +2041,6 @@ const lunarBiz = {
 
       document.querySelectorAll('.test-notify').forEach(button => {
         button.addEventListener('click', testSubscriptionNotification);
-      });
-
-      document.querySelectorAll('.renew-now').forEach(button => {
-        button.addEventListener('click', renewSubscriptionNow);
-      });
-
-      document.querySelectorAll('.view-history').forEach(button => {
-        button.addEventListener('click', viewPaymentHistory);
       });
 
       attachHoverListeners();
@@ -2199,592 +2116,7 @@ const lunarBiz = {
             button.disabled = false;
         }
     }
-
-    async function renewSubscriptionNow(e) {
-        const button = e.target.tagName === 'BUTTON' ? e.target : e.target.parentElement;
-        const id = button.dataset.id;
-
-        try {
-            const response = await fetch('/api/subscriptions/' + id);
-            const subscription = await response.json();
-            showRenewFormModal(subscription);
-        } catch (error) {
-            console.error('获取订阅信息失败:', error);
-            showToast('获取订阅信息时发生错误', 'error');
-        }
-    }
-
-    function showRenewFormModal(subscription) {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // 获取当前到期日的显示文本
-        let currentExpiryDisplay = '无';
-        if (subscription.expiryDate) {
-            const datePart = subscription.expiryDate.split('T')[0];
-            
-            currentExpiryDisplay = datePart;
-            
-            // 只有当订阅类型明确为“使用农历”时，才计算并显示农历日期文本
-            if (subscription.useLunar) {
-                try {
-                    const parts = datePart.split('-');
-                    const y = parseInt(parts[0], 10);
-                    const m = parseInt(parts[1], 10);
-                    const d = parseInt(parts[2], 10);
-                    
-                    const lunarObj = lunarCalendar.solar2lunar(y, m, d);
-                    if (lunarObj) {
-                        // 统一格式
-                        currentExpiryDisplay += ' (农历: ' + lunarObj.fullStr + ')';
-                    }
-                } catch (e) {
-                    console.error('农历计算失败', e);
-                }
-            }
-        }
-
-        const defaultAmount = subscription.amount || 0;
-        
-        // 获取动态货币符号
-        const currencySymbols = {
-          'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'TWD': 'NT$', 
-          'JPY': '¥', 'EUR': '€', 'GBP': '£', 'KRW': '₩'
-        };
-        const currency = subscription.currency || 'CNY';
-        const symbol = currencySymbols[currency] || '¥';
-        const currencyLabel = "(" + currency + " " + symbol + ")";
-        
-        // 【修改点1】农历标记：移除 absolute 定位，改为普通 Flex 布局元素，优化移动端显示
-        // 移除了 absolute top-2 right-2，添加了 shrink-0 防止被压缩
-        const lunarBadge = subscription.useLunar ? 
-            '<span class="text-sm bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200 shrink-0">农历周期</span>' : '';
-
-        // 构建 Modal HTML
-        const modalHtml = 
-            '<div id="renewFormModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="closeRenewFormModal(event)">' +
-            '    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white" onclick="event.stopPropagation()">' +
-            '        <div class="flex justify-between items-center pb-3 border-b">' +
-            '            <h3 class="text-xl font-semibold text-gray-900">' +
-            '                <i class="fas fa-sync-alt mr-2"></i>手动续订 - ' + subscription.name +
-            '            </h3>' +
-            '            <button onclick="closeRenewFormModal()" class="text-gray-400 hover:text-gray-500">' +
-            '                <i class="fas fa-times text-2xl"></i>' +
-            '            </button>' +
-            '        </div>' +
-            '' +
-            '        <form id="renewForm" class="mt-4 space-y-4">' +
-            '            <div>' +
-            '                <label class="block text-sm font-medium text-gray-700 mb-1">支付日期</label>' +
-            '                <input type="date" id="renewPaymentDate" value="' + today + '"' +
-            '                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">' +
-            '            </div>' +
-            '' +
-            '            <div>' +
-            '                <label class="block text-sm font-medium text-gray-700 mb-1">支付金额 ' + currencyLabel + '</label>' +
-            '                <input type="number" id="renewAmount" value="' + defaultAmount + '" step="0.01" min="0"' +
-            '                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">' +
-            '            </div>' +
-            '' +
-            '            <div>' +
-            // 【修改点2】将农历徽标移动到这里，与 label 同行显示
-            '                <div class="flex justify-between items-center mb-1">' +
-            '                    <label class="block text-sm font-medium text-gray-700">续订周期数</label>' +
-            '                    ' + lunarBadge + 
-            '                </div>' +
-            '                <div class="flex items-center space-x-2">' +
-            '                    <input type="number" id="renewPeriodMultiplier" value="1" min="1" max="120"' +
-            '                           class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"' +
-            '                           oninput="updateNewExpiryPreview()">' +
-            '                    <span class="text-gray-600">个</span>' + 
-            '                </div>' +
-            '                <p class="mt-1 text-xs text-gray-500">一次性续订多个周期（如12个月）</p>' +
-            '            </div>' +
-            '' +
-            // 【修改点3】蓝色预览框中移除了原来的 lunarBadge 插入
-            '            <div class="bg-blue-50 rounded-lg p-3 relative">' +
-            '                <div class="flex justify-start items-center text-sm mb-2 gap-3">' +
-            '                    <span class="text-gray-600 whitespace-nowrap">当前到期:</span>' +
-            '                    <div class="font-medium break-all">' + currentExpiryDisplay + '</div>' + // 增加了 break-all 防止超长日期撑破布局
-            '                </div>' +
-            '                <div class="flex justify-start items-center text-sm gap-3">' +
-            '                    <span class="text-gray-600 whitespace-nowrap">新到期日:</span>' +
-            '                    <div class="font-medium text-blue-600 break-all" id="newExpiryPreview">计算中...</div>' +
-            '                </div>' +
-            '            </div>' +
-            '' +
-            '            <div>' +
-            '                <label class="block text-sm font-medium text-gray-700 mb-1">备注 (可选)</label>' +
-            '                <input type="text" id="renewNote" placeholder="例如：年度优惠、价格调整"' +
-            '                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">' +
-            '            </div>' +
-            '' +
-            '            <div class="flex justify-end space-x-3 pt-3">' +
-            '                <button type="button" onclick="closeRenewFormModal()"' +
-            '                        class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md">' +
-            '                    取消' +
-            '                </button>' +
-            '                <button type="submit" id="confirmRenewBtn"' +
-            '                        class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md">' +
-            '                    <i class="fas fa-check mr-1"></i>确认续订' +
-            '                </button>' +
-            '            </div>' +
-            '        </form>' +
-            '    </div>' +
-            '</div>';
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // 保存订阅信息到表单
-        document.getElementById('renewForm').dataset.subscriptionId = subscription.id;
-        document.getElementById('renewForm').dataset.subscriptionData = JSON.stringify(subscription);
-
-        // 初始化新到期日预览
-        updateNewExpiryPreview();
-
-        // 绑定表单提交事件
-        document.getElementById('renewForm').addEventListener('submit', handleRenewFormSubmit);
-        document.getElementById('renewPeriodMultiplier').addEventListener('input', updateNewExpiryPreview);
-    }
-
-    function updateNewExpiryPreview() {
-        const form = document.getElementById('renewForm');
-        if (!form) return;
-
-        const subscription = JSON.parse(form.dataset.subscriptionData);
-        const multiplier = parseInt(document.getElementById('renewPeriodMultiplier').value) || 1;
-
-        // 获取基准日期，避免直接 new Date() 的时区问题
-        const getDateParts = (dateStr) => {
-            if (!dateStr) return { year: 2024, month: 1, day: 1 };
-            const part = dateStr.split('T')[0];
-            const parts = part.split('-');
-            return {
-                year: parseInt(parts[0], 10),
-                month: parseInt(parts[1], 10),
-                day: parseInt(parts[2], 10)
-            };
-        };
-
-        const parts = getDateParts(subscription.expiryDate);
-        
-        if (subscription.useLunar) {
-            try {
-                // 1. 转为农历对象
-                let lunar = lunarCalendar.solar2lunar(parts.year, parts.month, parts.day);
-                
-                if (lunar) {
-                    // 2. 循环添加周期
-                    let nextLunar = lunar;
-                    for(let i = 0; i < multiplier; i++) {
-                        nextLunar = lunarBiz.addLunarPeriod(nextLunar, subscription.periodValue, subscription.periodUnit);
-                    }
-                    
-                    // 3. 转回公历
-                    const solar = lunarBiz.lunar2solar(nextLunar);
-                    
-                    // 重点：用计算出的公历日期重新获取完整的农历对象，确保有 fullStr 属性
-                    const fullNextLunar = lunarCalendar.solar2lunar(solar.year, solar.month, solar.day);
-                    
-                    // 格式化输出 YYYY-MM-DD
-                    const resultStr = solar.year + '-' + 
-                                      String(solar.month).padStart(2, '0') + '-' + 
-                                      String(solar.day).padStart(2, '0');
-                                      
-                    document.getElementById('newExpiryPreview').textContent = resultStr + ' (农历: ' + fullNextLunar.fullStr + ')';
-                } else {
-                    document.getElementById('newExpiryPreview').textContent = '日期计算错误';
-                }
-            } catch (e) {
-                console.error(e);
-                document.getElementById('newExpiryPreview').textContent = '计算出错';
-            }
-        } else {
-            // 公历计算逻辑
-            const tempDate = new Date(parts.year, parts.month - 1, parts.day);
-            const totalPeriodValue = subscription.periodValue * multiplier;
-            
-            if (subscription.periodUnit === 'day') {
-                tempDate.setDate(tempDate.getDate() + totalPeriodValue);
-            } else if (subscription.periodUnit === 'month') {
-                tempDate.setMonth(tempDate.getMonth() + totalPeriodValue);
-            } else if (subscription.periodUnit === 'year') {
-                tempDate.setFullYear(tempDate.getFullYear() + totalPeriodValue);
-            }
-            
-            // 格式化输出 YYYY-MM-DD
-            const y = tempDate.getFullYear();
-            const m = String(tempDate.getMonth() + 1).padStart(2, '0');
-            const d = String(tempDate.getDate()).padStart(2, '0');
-            
-            document.getElementById('newExpiryPreview').textContent = y + '-' + m + '-' + d;
-        }
-    }
-
-    async function handleRenewFormSubmit(e) {
-        e.preventDefault();
-
-        const form = e.target;
-        const subscriptionId = form.dataset.subscriptionId;
-        const confirmBtn = document.getElementById('confirmRenewBtn');
-
-        const options = {
-            paymentDate: document.getElementById('renewPaymentDate').value,
-            amount: parseFloat(document.getElementById('renewAmount').value) || 0,
-            periodMultiplier: parseInt(document.getElementById('renewPeriodMultiplier').value) || 1,
-            note: document.getElementById('renewNote').value || '手动续订'
-        };
-
-        const originalBtnContent = confirmBtn.innerHTML;
-        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>续订中...';
-        confirmBtn.disabled = true;
-
-        try {
-            const response = await fetch('/api/subscriptions/' + subscriptionId + '/renew', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(options)
-            });
-            const result = await response.json();
-
-            if (result.success) {
-                showToast(result.message || '续订成功', 'success');
-                closeRenewFormModal();
-                await loadSubscriptions(false);
-            } else {
-                showToast(result.message || '续订失败', 'error');
-                confirmBtn.innerHTML = originalBtnContent;
-                confirmBtn.disabled = false;
-            }
-        } catch (error) {
-            console.error('续订失败:', error);
-            showToast('续订时发生错误', 'error');
-            confirmBtn.innerHTML = originalBtnContent;
-            confirmBtn.disabled = false;
-        }
-    }
-
-    window.closeRenewFormModal = function(event) {
-        if (event && event.target.id !== 'renewFormModal') {
-            return;
-        }
-        const modal = document.getElementById('renewFormModal');
-        if (modal) {
-            modal.remove();
-        }
-    };
-
-    async function viewPaymentHistory(e) {
-        const button = e.target.tagName === 'BUTTON' ? e.target : e.target.parentElement;
-        const id = button.dataset.id;
-
-        try {
-            const response = await fetch('/api/subscriptions/' + id + '/payments');
-            const result = await response.json();
-
-            if (!result.success) {
-                showToast(result.message || '获取支付历史失败', 'error');
-                return;
-            }
-
-            const payments = result.payments || [];
-            const subscriptionResponse = await fetch('/api/subscriptions/' + id);
-            const subscriptionData = await subscriptionResponse.json();
-            const subscription = subscriptionData;
-
-            showPaymentHistoryModal(subscription, payments);
-        } catch (error) {
-            console.error('获取支付历史失败:', error);
-            showToast('获取支付历史时发生错误', 'error');
-        }
-    }
-
-    function showPaymentHistoryModal(subscription, payments) {
-        const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-        const paymentCount = payments.length;
-
-        let paymentsHtml = '';
-        if (payments.length === 0) {
-            paymentsHtml = '<div class="text-center text-gray-500 py-8">暂无支付记录</div>';
-        } else {
-            paymentsHtml = payments.reverse().map(payment => {
-                const typeLabel = payment.type === 'initial' ? '初始订阅' :
-                                payment.type === 'manual' ? '手动续订' :
-                                payment.type === 'auto' ? '自动续订' : '未知';
-                const typeClass = payment.type === 'initial' ? 'bg-blue-100 text-blue-800' :
-                                payment.type === 'manual' ? 'bg-green-100 text-green-800' :
-                                payment.type === 'auto' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800';
-                const date = new Date(payment.date);
-                const formattedDate = date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                const formattedTime = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-                // 计费周期格式化
-                let periodHtml = '';
-                if (payment.periodStart && payment.periodEnd) {
-                    const periodStart = new Date(payment.periodStart);
-                    const periodEnd = new Date(payment.periodEnd);
-                    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-                    const startStr = periodStart.toLocaleDateString('zh-CN', options);
-                    const endStr = periodEnd.toLocaleDateString('zh-CN', options);
-                    periodHtml = '<div class="mt-1 ml-6 text-xs text-gray-500"><i class="fas fa-clock mr-1"></i>计费周期: ' + startStr + ' - ' + endStr + '</div>';
-                }
-
-                const noteHtml = payment.note ? '<div class="mt-1 ml-6 text-sm text-gray-600">' + payment.note + '</div>' : '';
-                const paymentDataJson = JSON.stringify(payment).replace(/"/g, '&quot;');
-                return \`
-                    <div class="border-b border-gray-200 py-3 hover:bg-gray-50">
-                        <div class="flex justify-between items-start gap-3">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-calendar-alt text-gray-400"></i>
-                                    <span class="font-medium">\${formattedDate} \${formattedTime}</span>
-                                    <span class="px-2 py-1 rounded text-xs font-medium \${typeClass}">\${typeLabel}</span>
-                                </div>
-                                \${periodHtml}
-                                \${noteHtml}
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="text-right">
-                                    <div class="text-lg font-bold text-gray-900">¥\${payment.amount.toFixed(2)}</div>
-                                </div>
-                                <div class="flex gap-1">
-                                    <button onclick="editPaymentRecord('\${subscription.id}', '\${payment.id}')"
-                                            class="text-blue-600 hover:text-blue-800 px-2 py-1"
-                                            title="编辑">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button onclick="deletePaymentRecord('\${subscription.id}', '\${payment.id}')"
-                                            class="text-red-600 hover:text-red-800 px-2 py-1"
-                                            title="删除">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                \`;
-            }).join('');
-        }
-
-        const modalHtml = \`
-            <div id="paymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="closePaymentHistoryModal(event)">
-                <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white" onclick="event.stopPropagation()">
-                    <div class="flex justify-between items-center pb-3 border-b">
-                        <h3 class="text-xl font-semibold text-gray-900">
-                            <i class="fas fa-history mr-2"></i>\${subscription.name} - 支付历史
-                        </h3>
-                        <button onclick="closePaymentHistoryModal()" class="text-gray-400 hover:text-gray-500">
-                            <i class="fas fa-times text-2xl"></i>
-                        </button>
-                    </div>
-
-                    <div class="mt-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="text-center">
-                                <div class="text-sm text-gray-600">累计支出</div>
-                                <div class="text-2xl font-bold text-purple-600">¥\${totalAmount.toFixed(2)}</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-sm text-gray-600">支付次数</div>
-                                <div class="text-2xl font-bold text-blue-600">\${paymentCount}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 max-h-96 overflow-y-auto">
-                        \${paymentsHtml}
-                    </div>
-
-                    <div class="mt-4 flex justify-end">
-                        <button onclick="closePaymentHistoryModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                            关闭
-                        </button>
-                    </div>
-                </div>
-            </div>
-        \`;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
-
-    window.closePaymentHistoryModal = function(event) {
-        if (event && event.target.id !== 'paymentHistoryModal') {
-            return;
-        }
-        const modal = document.getElementById('paymentHistoryModal');
-        if (modal) {
-            modal.remove();
-        }
-    };
-
-    window.deletePaymentRecord = async function(subscriptionId, paymentId) {
-        if (!confirm('确认删除此支付记录？删除后将重新计算统计数据。')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(\`/api/subscriptions/\${subscriptionId}/payments/\${paymentId}\`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-
-            if (result.success) {
-                showToast(result.message || '支付记录已删除', 'success');
-                // 关闭当前模态框
-                closePaymentHistoryModal();
-                // 刷新订阅列表
-                await loadSubscriptions(false);
-            } else {
-                showToast(result.message || '删除失败', 'error');
-            }
-        } catch (error) {
-            console.error('删除支付记录失败:', error);
-            showToast('删除时发生错误', 'error');
-        }
-    };
-
-    window.editPaymentRecord = async function(subscriptionId, paymentId) {
-        try {
-            // 获取订阅信息
-            const subResponse = await fetch(\`/api/subscriptions/\${subscriptionId}\`);
-            const subscription = await subResponse.json();
-
-            // 获取支付历史
-            const payResponse = await fetch(\`/api/subscriptions/\${subscriptionId}/payments\`);
-            const payResult = await payResponse.json();
-
-            const payment = payResult.payments.find(p => p.id === paymentId);
-            if (!payment) {
-                showToast('支付记录不存在', 'error');
-                return;
-            }
-
-            showEditPaymentModal(subscription, payment);
-        } catch (error) {
-            console.error('获取支付记录失败:', error);
-            showToast('获取支付记录时发生错误', 'error');
-        }
-    };
-
-    function showEditPaymentModal(subscription, payment) {
-        const paymentDate = new Date(payment.date);
-        const formattedDate = paymentDate.toISOString().split('T')[0];
-
-        const modalHtml = \`
-            <div id="editPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onclick="closeEditPaymentModal(event)">
-                <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white" onclick="event.stopPropagation()">
-                    <div class="flex justify-between items-center pb-3 border-b">
-                        <h3 class="text-xl font-semibold text-gray-900">
-                            <i class="fas fa-edit mr-2"></i>编辑支付记录
-                        </h3>
-                        <button onclick="closeEditPaymentModal()" class="text-gray-400 hover:text-gray-500">
-                            <i class="fas fa-times text-2xl"></i>
-                        </button>
-                    </div>
-
-                    <form id="editPaymentForm" class="mt-4 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">订阅名称</label>
-                            <input type="text" value="\${subscription.name}" disabled
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">支付日期</label>
-                            <input type="date" id="editPaymentDate" value="\${formattedDate}"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">支付金额 (¥)</label>
-                            <input type="number" id="editPaymentAmount" value="\${payment.amount}" step="0.01" min="0"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                            <input type="text" id="editPaymentNote" value="\${payment.note || ''}"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-
-                        <div class="flex justify-end space-x-3 pt-3">
-                            <button type="button" onclick="closeEditPaymentModal()"
-                                    class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md">
-                                取消
-                            </button>
-                            <button type="submit" id="confirmEditBtn"
-                                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
-                                <i class="fas fa-check mr-1"></i>保存
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        \`;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // 保存信息到表单
-        document.getElementById('editPaymentForm').dataset.subscriptionId = subscription.id;
-        document.getElementById('editPaymentForm').dataset.paymentId = payment.id;
-
-        // 绑定表单提交事件
-        document.getElementById('editPaymentForm').addEventListener('submit', handleEditPaymentSubmit);
-    }
-
-    async function handleEditPaymentSubmit(e) {
-        e.preventDefault();
-
-        const form = e.target;
-        const subscriptionId = form.dataset.subscriptionId;
-        const paymentId = form.dataset.paymentId;
-        const confirmBtn = document.getElementById('confirmEditBtn');
-
-        const paymentData = {
-            date: document.getElementById('editPaymentDate').value,
-            amount: parseFloat(document.getElementById('editPaymentAmount').value) || 0,
-            note: document.getElementById('editPaymentNote').value
-        };
-
-        const originalBtnContent = confirmBtn.innerHTML;
-        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>保存中...';
-        confirmBtn.disabled = true;
-
-        try {
-            const response = await fetch(\`/api/subscriptions/\${subscriptionId}/payments/\${paymentId}\`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(paymentData)
-            });
-            const result = await response.json();
-
-            if (result.success) {
-                showToast(result.message || '支付记录已更新', 'success');
-                closeEditPaymentModal();
-                closePaymentHistoryModal();
-                await loadSubscriptions(false);
-            } else {
-                showToast(result.message || '更新失败', 'error');
-                confirmBtn.innerHTML = originalBtnContent;
-                confirmBtn.disabled = false;
-            }
-        } catch (error) {
-            console.error('更新支付记录失败:', error);
-            showToast('更新时发生错误', 'error');
-            confirmBtn.innerHTML = originalBtnContent;
-            confirmBtn.disabled = false;
-        }
-    }
-
-    window.closeEditPaymentModal = function(event) {
-        if (event && event.target.id !== 'editPaymentModal') {
-            return;
-        }
-        const modal = document.getElementById('editPaymentModal');
-        if (modal) {
-            modal.remove();
-        }
-    };
-
+    
     async function toggleSubscriptionStatus(e) {
       const id = e.target.dataset.id || e.target.parentElement.dataset.id;
       const action = e.target.dataset.action || e.target.parentElement.dataset.action;
@@ -2824,7 +2156,6 @@ const lunarBiz = {
       document.getElementById('subscriptionModal').classList.remove('hidden');
 
       document.getElementById('subscriptionForm').reset();
-      document.getElementById('currency').value = 'CNY'; // 默认设置为CNY
       document.getElementById('subscriptionId').value = '';
       clearFieldErrors();
 
@@ -3085,7 +2416,7 @@ const lunarBiz = {
           return;
         }
 
-        const match = value.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/);
+        const match = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (!match) {
           if (typeof showToast === 'function') {
             showToast('日期格式需为 YYYY-MM-DD', 'warning');
@@ -3505,8 +2836,6 @@ const lunarBiz = {
         customType: document.getElementById('customType').value.trim(),
         category: document.getElementById('category').value.trim(),
         notes: document.getElementById('notes').value.trim() || '',
-        currency: document.getElementById('currency').value, // 新增修改，表单提交时带上 currency 字段
-        amount: document.getElementById('amount').value ? parseFloat(document.getElementById('amount').value) : null,
         isActive: document.getElementById('isActive').checked,
         autoRenew: document.getElementById('autoRenew').checked,
         startDate: document.getElementById('startDate').value,
@@ -3568,8 +2897,6 @@ const lunarBiz = {
           document.getElementById('customType').value = subscription.customType || '';
           document.getElementById('category').value = subscription.category || '';
           document.getElementById('notes').value = subscription.notes || '';
-          document.getElementById('amount').value = subscription.amount || '';
-          document.getElementById('currency').value = subscription.currency || 'CNY'; // 默认设置为 CNY
           document.getElementById('isActive').checked = subscription.isActive !== false;
           document.getElementById('autoRenew').checked = subscription.autoRenew !== false;
           document.getElementById('startDate').value = subscription.startDate ? subscription.startDate.split('T')[0] : '';
@@ -3837,9 +3164,6 @@ const configPage = `
           <span id="systemTimeDisplay" class="ml-4 text-base text-indigo-600 font-normal"></span>
         </div>
         <div class="flex items-center space-x-4">
-          <a href="/admin/dashboard" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-chart-line mr-1"></i>仪表盘
-          </a>
           <a href="/admin" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
             <i class="fas fa-list mr-1"></i>订阅列表
           </a>
@@ -4680,265 +4004,6 @@ const configPage = `
 // 与前端一致的分类切割正则，用于提取标签信息
 const CATEGORY_SEPARATOR_REGEX = /[\/,，\s]+/;
 
-
-function dashboardPage() {
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>仪表盘 - SubsTracker</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-  <style>
-    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: all 0.3s; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); }
-    .stat-card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s}
-    .stat-card:hover{transform:translateY(-4px);box-shadow:0 4px 16px rgba(0,0,0,0.15)}
-    .stat-card-header{color:#6b7280;font-size:0.875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem}
-    .stat-card-value{font-size:2rem;font-weight:700;color:#1f2937;margin-bottom:0.25rem}
-    .stat-card-subtitle{color:#9ca3af;font-size:0.875rem}
-    .stat-card-trend{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.875rem;margin-top:0.5rem;padding:0.25rem 0.5rem;border-radius:6px}
-    .stat-card-trend.up{color:#10b981;background:#d1fae5}
-    .stat-card-trend.down{color:#ef4444;background:#fee2e2}
-    .stat-card-trend.flat{color:#6b7280;background:#f3f4f6}
-    .list-item{display:flex;align-items:center;justify-content:space-between;padding:1rem;border-radius:8px;transition:background 0.2s}
-    .list-item:hover{background:#f9fafb}
-    .list-item:not(:last-child){border-bottom:1px solid #f3f4f6}
-    .list-item-content{flex:1}
-    .list-item-name{font-weight:600;color:#1f2937;margin-bottom:0.25rem}
-    .list-item-meta{display:flex;align-items:center;gap:1rem;font-size:0.875rem;color:#6b7280;flex-wrap:wrap}
-    .list-item-amount{font-size:1.125rem;font-weight:700;color:#10b981}
-    .list-item-badge{display:inline-block;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.75rem;font-weight:500;background:#e0e7ff;color:#4f46e5}
-    .ranking-item{margin-bottom:1rem}
-    .ranking-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem}
-    .ranking-item-name{font-weight:600;color:#1f2937}
-    .ranking-item-value{display:flex;align-items:center;gap:0.5rem;font-size:0.875rem}
-    .ranking-item-amount{font-weight:700;color:#1f2937}
-    .ranking-item-percentage{color:#10b981}
-    .ranking-progress{width:100%;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
-    .ranking-progress-bar{height:100%;border-radius:4px;transition:width 0.6s ease}
-    .ranking-progress-bar.color-1{background:linear-gradient(90deg,#6366f1,#8b5cf6)}
-    .ranking-progress-bar.color-2{background:linear-gradient(90deg,#10b981,#059669)}
-    .ranking-progress-bar.color-3{background:linear-gradient(90deg,#f59e0b,#d97706)}
-    .ranking-progress-bar.color-4{background:linear-gradient(90deg,#ef4444,#dc2626)}
-    .ranking-progress-bar.color-5{background:linear-gradient(90deg,#8b5cf6,#7c3aed)}
-    .empty-state{text-align:center;padding:3rem 1rem;color:#9ca3af}
-    .empty-state-icon{font-size:3rem;margin-bottom:1rem;opacity:0.5}
-    .empty-state-text{font-size:0.875rem}
-    .loading-skeleton{background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);background-size:200% 100%;animation:loading 1.5s infinite;height:100px;border-radius:8px}
-    @keyframes loading{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  </style>
-</head>
-<body class="bg-gray-50">
-  <nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex items-center">
-          <i class="fas fa-calendar-check text-indigo-600 text-2xl mr-2"></i>
-          <span class="font-bold text-xl text-gray-800">订阅管理系统</span>
-        </div>
-        <div class="flex items-center space-x-4">
-          <a href="/admin/dashboard" class="text-indigo-600 border-b-2 border-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-chart-line mr-1"></i>仪表盘
-          </a>
-          <a href="/admin" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-list mr-1"></i>订阅列表
-          </a>
-          <a href="/admin/config" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-cog mr-1"></i>系统配置
-          </a>
-          <a href="/api/logout" class="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-sign-out-alt mr-1"></i>退出登录
-          </a>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-800">📊 仪表板</h2>
-      <p class="text-sm text-gray-500 mt-1">订阅费用和活动概览（统计金额已折合为 CNY）</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6" id="statsGrid">
-      <div class="loading-skeleton"></div>
-      <div class="loading-skeleton"></div>
-      <div class="loading-skeleton"></div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fas fa-calendar-check text-blue-500"></i>
-          <h3 class="text-lg font-medium text-gray-900">最近支付</h3>
-        </div>
-        <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">过去7天</span>
-      </div>
-      <div class="p-6" id="recentPayments">
-        <div class="loading-skeleton"></div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fas fa-clock text-yellow-500"></i>
-          <h3 class="text-lg font-medium text-gray-900">即将续费</h3>
-        </div>
-        <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">未来7天</span>
-      </div>
-      <div class="p-6" id="upcomingRenewals">
-        <div class="loading-skeleton"></div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-chart-bar text-purple-500"></i>
-            <h3 class="text-lg font-medium text-gray-900">按类型支出排行</h3>
-          </div>
-          <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">年度统计 (折合CNY)</span>
-        </div>
-        <div class="p-6" id="expenseByType">
-          <div class="loading-skeleton"></div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-folder text-green-500"></i>
-            <h3 class="text-lg font-medium text-gray-900">按分类支出统计</h3>
-          </div>
-          <span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">年度统计 (折合CNY)</span>
-        </div>
-        <div class="p-6" id="expenseByCategory">
-          <div class="loading-skeleton"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // 定义货币符号映射
-    const currencySymbols = {
-      'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'TWD': 'NT$', 
-      'JPY': '¥', 'EUR': '€', 'GBP': '£', 'KRW': '₩'
-    };
-    function getSymbol(currency) {
-      return currencySymbols[currency] || '¥';
-    }
-
-    async function loadDashboardData(){
-      try {
-        const r=await fetch('/api/dashboard/stats');
-        const d=await r.json();
-        if(!d.success) throw new Error(d.message||'加载失败');
-        
-        const data=d.data;
-        document.getElementById('statsGrid').innerHTML=\`
-          <div class="stat-card">
-            <div class="stat-card-header">月度支出 (CNY)</div>
-            <div class="stat-card-value">¥\${data.monthlyExpense.amount.toFixed(2)}</div>
-            <div class="stat-card-subtitle">本月折合支出</div>
-            <div class="stat-card-trend \${data.monthlyExpense.trendDirection}">
-              <i class="fas fa-arrow-\${data.monthlyExpense.trendDirection==='up'?'up':data.monthlyExpense.trendDirection==='down'?'down':'right'}"></i>
-              \${data.monthlyExpense.trend}%
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-header">年度支出 (CNY)</div>
-            <div class="stat-card-value">¥\${data.yearlyExpense.amount.toFixed(2)}</div>
-            <div class="stat-card-subtitle">月均支出: ¥\${data.yearlyExpense.monthlyAverage.toFixed(2)}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-header">活跃订阅</div>
-            <div class="stat-card-value">\${data.activeSubscriptions.active}</div>
-            <div class="stat-card-subtitle">总订阅数: \${data.activeSubscriptions.total}</div>
-            \${data.activeSubscriptions.expiringSoon>0?\`<div class="stat-card-trend down"><i class="fas fa-exclamation-circle"></i>\${data.activeSubscriptions.expiringSoon} 即将到期</div>\`:''}
-          </div>
-        \`;
-        
-        const rp=document.getElementById('recentPayments');
-        rp.innerHTML=data.recentPayments.length===0?'<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">过去7天内没有支付记录</div></div>':
-        data.recentPayments.map(s=>\`
-          <div class="list-item">
-            <div class="list-item-content">
-              <div class="list-item-name">\${s.name}</div>
-              <div class="list-item-meta">
-                <span><i class="fas fa-calendar"></i> \${new Date(s.paymentDate).toLocaleDateString('zh-CN')}</span>
-                \${s.customType?\`<span class="list-item-badge">\${s.customType}</span>\`:''}
-              </div>
-            </div>
-            <div class="list-item-amount">\${getSymbol(s.currency)}\${(s.amount||0).toFixed(2)}</div>
-          </div>
-        \`).join('');
-        
-        const ur=document.getElementById('upcomingRenewals');
-        ur.innerHTML=data.upcomingRenewals.length===0?'<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">未来7天内没有即将续费的订阅</div></div>':
-        data.upcomingRenewals.map(s=>\`
-          <div class="list-item">
-            <div class="list-item-content">
-              <div class="list-item-name">\${s.name}</div>
-              <div class="list-item-meta">
-                <span><i class="fas fa-clock"></i> \${new Date(s.renewalDate).toLocaleDateString('zh-CN')}</span>
-                <span style="color:#f59e0b;font-weight:600">\${s.daysUntilRenewal} 天后</span>
-                \${s.customType?\`<span class="list-item-badge">\${s.customType}</span>\`:''}
-              </div>
-            </div>
-            <div class="list-item-amount">\${getSymbol(s.currency)}\${(s.amount||0).toFixed(2)}</div>
-          </div>
-        \`).join('');
-        
-        // 支出排行仍然显示 CNY
-        const et=document.getElementById('expenseByType');
-        et.innerHTML=data.expenseByType.length===0?'<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">暂无支出数据</div></div>':
-        data.expenseByType.map((item,i)=>\`
-          <div class="ranking-item">
-            <div class="ranking-item-header">
-              <div class="ranking-item-name">\${item.type}</div>
-              <div class="ranking-item-value">
-                <span class="ranking-item-amount">¥\${item.amount.toFixed(2)}</span>
-                <span class="ranking-item-percentage">\${item.percentage}%</span>
-              </div>
-            </div>
-            <div class="ranking-progress">
-              <div class="ranking-progress-bar color-\${(i%5)+1}" style="width:\${item.percentage}%"></div>
-            </div>
-          </div>
-        \`).join('');
-        
-        const ec=document.getElementById('expenseByCategory');
-        ec.innerHTML=data.expenseByCategory.length===0?'<div class="empty-state"><div class="empty-state-icon">📂</div><div class="empty-state-text">暂无支出数据</div></div>':
-        data.expenseByCategory.map((item,i)=>\`
-          <div class="ranking-item">
-            <div class="ranking-item-header">
-              <div class="ranking-item-name">\${item.category}</div>
-              <div class="ranking-item-value">
-                <span class="ranking-item-amount">¥\${item.amount.toFixed(2)}</span>
-                <span class="ranking-item-percentage">\${item.percentage}%</span>
-              </div>
-            </div>
-            <div class="ranking-progress">
-              <div class="ranking-progress-bar color-\${(i%5)+1}" style="width:\${item.percentage}%"></div>
-            </div>
-          </div>
-        \`).join('');
-      } catch(e){
-        console.error('加载仪表盘数据失败:',e);
-        document.getElementById('statsGrid').innerHTML='<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">加载失败:'+e.message+'</div></div>';
-      }
-    }
-    loadDashboardData();
-    setInterval(loadDashboardData, 60000);
-  </script>
-</body>
-</html>`;
-}
 function extractTagsFromSubscriptions(subscriptions = []) {
   const tagSet = new Set();
   (subscriptions || []).forEach(sub => {
@@ -4991,12 +4056,6 @@ const admin = {
 
       if (pathname === '/admin/config') {
         return new Response(configPage, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
-      }
-
-      if (pathname === '/admin/dashboard') {
-        return new Response(dashboardPage(), {
           headers: { 'Content-Type': 'text/html; charset=utf-8' }
         });
       }
@@ -5155,54 +4214,6 @@ const api = {
       }
     }
 
-    if (path === '/dashboard/stats' && method === 'GET') {
-      try {
-        const subscriptions = await getAllSubscriptions(env);
-        const timezone = config?.TIMEZONE || 'UTC';
-
-        const monthlyExpense = calculateMonthlyExpense(subscriptions, timezone);
-        const yearlyExpense = calculateYearlyExpense(subscriptions, timezone);
-        const recentPayments = getRecentPayments(subscriptions, timezone);
-        const upcomingRenewals = getUpcomingRenewals(subscriptions, timezone);
-        const expenseByType = getExpenseByType(subscriptions, timezone);
-        const expenseByCategory = getExpenseByCategory(subscriptions, timezone);
-
-        const activeSubscriptions = subscriptions.filter(s => s.isActive);
-        const now = getCurrentTimeInTimezone(timezone);
-        const sevenDaysLater = new Date(now.getTime() + 7 * MS_PER_DAY);
-        const expiringSoon = activeSubscriptions.filter(s => {
-          const expiryDate = new Date(s.expiryDate);
-          return expiryDate >= now && expiryDate <= sevenDaysLater;
-        }).length;
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              monthlyExpense,
-              yearlyExpense,
-              activeSubscriptions: {
-                active: activeSubscriptions.length,
-                total: subscriptions.length,
-                expiringSoon
-              },
-              recentPayments,
-              upcomingRenewals,
-              expenseByType,
-              expenseByCategory
-            }
-          }),
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-      } catch (error) {
-        console.error('获取仪表盘统计失败:', error);
-        return new Response(
-          JSON.stringify({ success: false, message: '获取统计数据失败: ' + error.message }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
     if (path === '/test-notification' && method === 'POST') {
       try {
         const body = await request.json();
@@ -5344,39 +4355,6 @@ const api = {
       if (parts[3] === 'test-notify' && method === 'POST') {
         const result = await testSingleSubscriptionNotification(id, env);
         return new Response(JSON.stringify(result), { status: result.success ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (parts[3] === 'renew' && method === 'POST') {
-        let options = {};
-        try {
-          const body = await request.json();
-          options = body || {};
-        } catch (e) {
-          // 如果没有请求体，使用默认空对象
-        }
-        const result = await manualRenewSubscription(id, env, options);
-        return new Response(JSON.stringify(result), { status: result.success ? 200 : 400, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (parts[3] === 'payments' && method === 'GET') {
-        const subscription = await getSubscription(id, env);
-        if (!subscription) {
-          return new Response(JSON.stringify({ success: false, message: '订阅不存在' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
-        }
-        return new Response(JSON.stringify({ success: true, payments: subscription.paymentHistory || [] }), { headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (parts[3] === 'payments' && parts[4] && method === 'DELETE') {
-        const paymentId = parts[4];
-        const result = await deletePaymentRecord(id, paymentId, env);
-        return new Response(JSON.stringify(result), { status: result.success ? 200 : 400, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      if (parts[3] === 'payments' && parts[4] && method === 'PUT') {
-        const paymentId = parts[4];
-        const paymentData = await request.json();
-        const result = await updatePaymentRecord(id, paymentId, paymentData, env);
-        return new Response(JSON.stringify(result), { status: result.success ? 200 : 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       if (method === 'GET') {
@@ -5702,7 +4680,6 @@ async function createSubscription(subscription, env) {
 
     const reminderSetting = resolveReminderSetting(subscription);
 
-    const initialPaymentDate = subscription.startDate || currentTime.toISOString();
     const newSubscription = {
       id: Date.now().toString(), // 前端使用本地时间戳
       name: subscription.name,
@@ -5717,18 +4694,6 @@ async function createSubscription(subscription, env) {
       reminderDays: reminderSetting.unit === 'day' ? reminderSetting.value : undefined,
       reminderHours: reminderSetting.unit === 'hour' ? reminderSetting.value : undefined,
       notes: subscription.notes || '',
-      amount: subscription.amount || null,
-      currency: subscription.currency || 'CNY', // 使用传入的币种，默认为CNY  
-      lastPaymentDate: initialPaymentDate,
-      paymentHistory: subscription.amount ? [{
-        id: Date.now().toString(),
-        date: initialPaymentDate,
-        amount: subscription.amount,
-        type: 'initial',
-        note: '初始订阅',
-        periodStart: subscription.startDate || initialPaymentDate,
-        periodEnd: subscription.expiryDate
-      }] : [],
       isActive: subscription.isActive !== false,
       autoRenew: subscription.autoRenew !== false,
       useLunar: useLunar,
@@ -5807,26 +4772,6 @@ if (useLunar) {
     };
     const reminderSetting = resolveReminderSetting(reminderSource);
 
-    // --- 新增/修改逻辑开始 ---
-    // 获取旧的订阅信息以便比较
-    const oldSubscription = subscriptions[index];
-    const newAmount = subscription.amount !== undefined ? subscription.amount : oldSubscription.amount;
-    
-    let paymentHistory = oldSubscription.paymentHistory || [];
-    
-    // 核心修复：如果金额发生了变化，且存在初始支付记录，则同步更新初始支付记录的金额
-    // 这解决了"修改订阅金额后，仪表盘统计不更新"的问题
-    if (newAmount !== oldSubscription.amount) {
-      const initialPaymentIndex = paymentHistory.findIndex(p => p.type === 'initial');
-      if (initialPaymentIndex !== -1) {
-        paymentHistory[initialPaymentIndex] = {
-          ...paymentHistory[initialPaymentIndex],
-          amount: newAmount
-        };
-      }
-    }
-    // --- 新增/修改逻辑结束 ---
-
     subscriptions[index] = {
       ...subscriptions[index],
       name: subscription.name,
@@ -5841,10 +4786,6 @@ if (useLunar) {
       reminderDays: reminderSetting.unit === 'day' ? reminderSetting.value : undefined,
       reminderHours: reminderSetting.unit === 'hour' ? reminderSetting.value : undefined,
       notes: subscription.notes || '',
-      amount: newAmount, // 使用新的变量
-      currency: subscription.currency || subscriptions[index].currency || 'CNY', // 更新币种
-      lastPaymentDate: subscriptions[index].lastPaymentDate || subscriptions[index].startDate || subscriptions[index].createdAt || currentTime.toISOString(),
-      paymentHistory: paymentHistory, // 保存更新后的支付历史
       isActive: subscription.isActive !== undefined ? subscription.isActive : subscriptions[index].isActive,
       autoRenew: subscription.autoRenew !== undefined ? subscription.autoRenew : (subscriptions[index].autoRenew !== undefined ? subscriptions[index].autoRenew : true),
       useLunar: useLunar,
@@ -5873,199 +4814,6 @@ async function deleteSubscription(id, env) {
     return { success: true };
   } catch (error) {
     return { success: false, message: '删除订阅失败' };
-  }
-}
-
-async function manualRenewSubscription(id, env, options = {}) {
-  try {
-    const subscriptions = await getAllSubscriptions(env);
-    const index = subscriptions.findIndex(s => s.id === id);
-
-    if (index === -1) {
-      return { success: false, message: '订阅不存在' };
-    }
-
-    const subscription = subscriptions[index];
-
-    if (!subscription.periodValue || !subscription.periodUnit) {
-      return { success: false, message: '订阅未设置续订周期' };
-    }
-
-    const config = await getConfig(env);
-    const timezone = config?.TIMEZONE || 'UTC';
-    const currentTime = getCurrentTimeInTimezone(timezone);
-
-    // 支持自定义参数
-    const paymentDate = options.paymentDate ? new Date(options.paymentDate) : currentTime;
-    const amount = options.amount !== undefined ? options.amount : subscription.amount || 0;
-    const periodMultiplier = options.periodMultiplier || 1; // 支持续订多个周期
-    const note = options.note || '手动续订';
-
-    let expiryDate = new Date(subscription.expiryDate);
-    let newExpiryDate;
-
-    if (subscription.useLunar) {
-      const lunar = lunarCalendar.solar2lunar(
-        expiryDate.getFullYear(),
-        expiryDate.getMonth() + 1,
-        expiryDate.getDate()
-      );
-      // 支持多周期续订
-      let nextLunar = lunar;
-      for (let i = 0; i < periodMultiplier; i++) {
-        nextLunar = lunarBiz.addLunarPeriod(nextLunar, subscription.periodValue, subscription.periodUnit);
-      }
-      const solar = lunarBiz.lunar2solar(nextLunar);
-      newExpiryDate = new Date(solar.year, solar.month - 1, solar.day);
-    } else {
-      newExpiryDate = new Date(expiryDate);
-      const totalPeriodValue = subscription.periodValue * periodMultiplier;
-      if (subscription.periodUnit === 'day') {
-        newExpiryDate.setDate(expiryDate.getDate() + totalPeriodValue);
-      } else if (subscription.periodUnit === 'month') {
-        newExpiryDate.setMonth(expiryDate.getMonth() + totalPeriodValue);
-      } else if (subscription.periodUnit === 'year') {
-        newExpiryDate.setFullYear(expiryDate.getFullYear() + totalPeriodValue);
-      }
-    }
-
-    const paymentRecord = {
-      id: Date.now().toString(),
-      date: paymentDate.toISOString(),
-      amount: amount,
-      type: 'manual',
-      note: note,
-      periodStart: expiryDate.toISOString(),
-      periodEnd: newExpiryDate.toISOString()
-    };
-
-    const paymentHistory = subscription.paymentHistory || [];
-    paymentHistory.push(paymentRecord);
-
-    subscriptions[index] = {
-      ...subscription,
-      expiryDate: newExpiryDate.toISOString(),
-      lastPaymentDate: paymentDate.toISOString(),
-      paymentHistory
-    };
-
-    await env.SUBSCRIPTIONS_KV.put('subscriptions', JSON.stringify(subscriptions));
-
-    return { success: true, subscription: subscriptions[index], message: '续订成功' };
-  } catch (error) {
-    console.error('手动续订失败:', error);
-    return { success: false, message: '续订失败: ' + error.message };
-  }
-}
-
-async function deletePaymentRecord(subscriptionId, paymentId, env) {
-  try {
-    const subscriptions = await getAllSubscriptions(env);
-    const index = subscriptions.findIndex(s => s.id === subscriptionId);
-
-    if (index === -1) {
-      return { success: false, message: '订阅不存在' };
-    }
-
-    const subscription = subscriptions[index];
-    const paymentHistory = subscription.paymentHistory || [];
-    const paymentIndex = paymentHistory.findIndex(p => p.id === paymentId);
-
-    if (paymentIndex === -1) {
-      return { success: false, message: '支付记录不存在' };
-    }
-
-    const deletedPayment = paymentHistory[paymentIndex];
-
-    // 删除支付记录
-    paymentHistory.splice(paymentIndex, 1);
-
-    // 回退订阅周期和更新 lastPaymentDate
-    let newExpiryDate = subscription.expiryDate;
-    let newLastPaymentDate = subscription.lastPaymentDate;
-
-    if (paymentHistory.length > 0) {
-      // 找到剩余支付记录中 periodEnd 最晚的那条（最新的续订）
-      const sortedByPeriodEnd = [...paymentHistory].sort((a, b) => {
-        const dateA = a.periodEnd ? new Date(a.periodEnd) : new Date(0);
-        const dateB = b.periodEnd ? new Date(b.periodEnd) : new Date(0);
-        return dateB - dateA;
-      });
-
-      // 订阅的到期日期应该是最新续订的 periodEnd
-      if (sortedByPeriodEnd[0].periodEnd) {
-        newExpiryDate = sortedByPeriodEnd[0].periodEnd;
-      }
-
-      // 找到最新的支付记录日期
-      const sortedByDate = [...paymentHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-      newLastPaymentDate = sortedByDate[0].date;
-    } else {
-      // 如果没有支付记录了，回退到初始状态
-      // expiryDate 保持不变或使用 periodStart（如果删除的记录有）
-      if (deletedPayment.periodStart) {
-        newExpiryDate = deletedPayment.periodStart;
-      }
-      newLastPaymentDate = subscription.startDate || subscription.createdAt || subscription.expiryDate;
-    }
-
-    subscriptions[index] = {
-      ...subscription,
-      expiryDate: newExpiryDate,
-      paymentHistory,
-      lastPaymentDate: newLastPaymentDate
-    };
-
-    await env.SUBSCRIPTIONS_KV.put('subscriptions', JSON.stringify(subscriptions));
-
-    return { success: true, subscription: subscriptions[index], message: '支付记录已删除' };
-  } catch (error) {
-    console.error('删除支付记录失败:', error);
-    return { success: false, message: '删除失败: ' + error.message };
-  }
-}
-
-async function updatePaymentRecord(subscriptionId, paymentId, paymentData, env) {
-  try {
-    const subscriptions = await getAllSubscriptions(env);
-    const index = subscriptions.findIndex(s => s.id === subscriptionId);
-
-    if (index === -1) {
-      return { success: false, message: '订阅不存在' };
-    }
-
-    const subscription = subscriptions[index];
-    const paymentHistory = subscription.paymentHistory || [];
-    const paymentIndex = paymentHistory.findIndex(p => p.id === paymentId);
-
-    if (paymentIndex === -1) {
-      return { success: false, message: '支付记录不存在' };
-    }
-
-    // 更新支付记录
-    paymentHistory[paymentIndex] = {
-      ...paymentHistory[paymentIndex],
-      date: paymentData.date || paymentHistory[paymentIndex].date,
-      amount: paymentData.amount !== undefined ? paymentData.amount : paymentHistory[paymentIndex].amount,
-      note: paymentData.note !== undefined ? paymentData.note : paymentHistory[paymentIndex].note
-    };
-
-    // 更新 lastPaymentDate 为最新的支付记录日期
-    const sortedPayments = [...paymentHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-    const newLastPaymentDate = sortedPayments[0].date;
-
-    subscriptions[index] = {
-      ...subscription,
-      paymentHistory,
-      lastPaymentDate: newLastPaymentDate
-    };
-
-    await env.SUBSCRIPTIONS_KV.put('subscriptions', JSON.stringify(subscriptions));
-
-    return { success: true, subscription: subscriptions[index], message: '支付记录已更新' };
-  } catch (error) {
-    console.error('更新支付记录失败:', error);
-    return { success: false, message: '更新失败: ' + error.message };
   }
 }
 
@@ -6121,10 +4869,9 @@ async function testSingleSubscriptionNotification(id, env) {
     // 获取日历类型和自动续期状态
     const calendarType = subscription.useLunar ? '农历' : '公历';
     const autoRenewText = subscription.autoRenew ? '是' : '否';
-    const amountText = subscription.amount ? `\n金额: ¥${subscription.amount.toFixed(2)}/周期` : '';
-
+    
     const commonContent = `**订阅详情**
-类型: ${subscription.customType || '其他'}${amountText}
+类型: ${subscription.customType || '其他'}
 日历类型: ${calendarType}
 到期日期: ${formattedExpiryDate}${lunarExpiryText}
 自动续期: ${autoRenewText}
@@ -6247,6 +4994,12 @@ async function sendWebhookNotification(title, content, config, metadata = {}) {
     console.error('[Webhook通知] 发送通知失败:', error);
     return false;
   }
+}
+
+async function sendWeComNotification(message, config) {
+    // This is a placeholder. In a real scenario, you would implement the WeCom notification logic here.
+    console.log("[企业微信] 通知功能未实现");
+    return { success: false, message: "企业微信通知功能未实现" };
 }
 
 async function sendWechatBotNotification(title, content, config) {
@@ -6430,12 +5183,11 @@ function formatNotificationContent(subscriptions, config) {
     // 获取日历类型和自动续期状态
     const calendarType = sub.useLunar ? '农历' : '公历';
     const autoRenewText = sub.autoRenew ? '是' : '否';
-    const amountText = sub.amount ? `\n金额: ¥${sub.amount.toFixed(2)}/周期` : '';
-
+    
     // 构建格式化的通知内容
     const subscriptionContent = `${statusEmoji} **${sub.name}**
 类型: ${typeText} ${periodText}
-分类: ${categoryText}${amountText}
+分类: ${categoryText}
 日历类型: ${calendarType}
 到期日期: ${formattedExpiryDate}${lunarExpiryText}
 自动续期: ${autoRenewText}
@@ -6483,6 +5235,11 @@ async function sendNotificationToAllChannels(title, commonContent, config, logPr
         const wechatbotContent = commonContent.replace(/(\**|\*|##|#|`)/g, '');
         const success = await sendWechatBotNotification(title, wechatbotContent, config);
         console.log(`${logPrefix} 发送企业微信机器人通知 ${success ? '成功' : '失败'}`);
+    }
+    if (config.ENABLED_NOTIFIERS.includes('weixin')) {
+        const weixinContent = `【${title}】\n\n${commonContent.replace(/(\**|\*|##|#|`)/g, '')}`;
+        const result = await sendWeComNotification(weixinContent, config);
+        console.log(`${logPrefix} 发送企业微信通知 ${result.success ? '成功' : '失败'}. ${result.message}`);
     }
     if (config.ENABLED_NOTIFIERS.includes('email')) {
         const emailContent = commonContent.replace(/(\**|\*|##|#|`)/g, '');
@@ -6754,25 +5511,7 @@ for (const subscription of subscriptions) {
       diffMs = newExpiryDate.getTime() - currentTime.getTime();
       diffHours = diffMs / MS_PER_HOUR;
 
-      const paymentRecord = {
-        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
-        date: currentTime.toISOString(),
-        amount: subscription.amount || 0,
-        type: 'auto',
-        note: '自动续订',
-        periodStart: expiryDate.toISOString(),
-        periodEnd: newExpiryDate.toISOString()
-      };
-
-      const paymentHistory = subscription.paymentHistory || [];
-      paymentHistory.push(paymentRecord);
-
-      const updatedSubscription = {
-        ...subscription,
-        expiryDate: newExpiryDate.toISOString(),
-        lastPaymentDate: currentTime.toISOString(),
-        paymentHistory
-      };
+      const updatedSubscription = { ...subscription, expiryDate: newExpiryDate.toISOString() };
       updatedSubscriptions.push(updatedSubscription);
       hasUpdates = true;
 
@@ -6827,25 +5566,7 @@ for (const subscription of subscriptions) {
       diffMs = newExpiryDate.getTime() - currentTime.getTime();
       diffHours = diffMs / MS_PER_HOUR;
 
-      const paymentRecord = {
-        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
-        date: currentTime.toISOString(),
-        amount: subscription.amount || 0,
-        type: 'auto',
-        note: '自动续订',
-        periodStart: expiryDate.toISOString(),
-        periodEnd: newExpiryDate.toISOString()
-      };
-
-      const paymentHistory = subscription.paymentHistory || [];
-      paymentHistory.push(paymentRecord);
-
-      const updatedSubscription = {
-        ...subscription,
-        expiryDate: newExpiryDate.toISOString(),
-        lastPaymentDate: currentTime.toISOString(),
-        paymentHistory
-      };
+      const updatedSubscription = { ...subscription, expiryDate: newExpiryDate.toISOString() };
       updatedSubscriptions.push(updatedSubscription);
       hasUpdates = true;
 
@@ -7050,234 +5771,3 @@ export default {
     await checkExpiringSubscriptions(env);
   }
 };
-
-// ==================== 仪表盘统计函数 ====================
-
-// 汇率配置 (以 CNY 为基准)
-// 您可以根据需要修改此处的汇率
-const EXCHANGE_RATES = {
-  'CNY': 1,
-  'USD': 6.98,
-  'HKD': 0.90,
-  'TWD': 0.22,
-  'JPY': 0.044,
-  'EUR': 8.16,
-  'GBP': 9.40,
-  'KRW': 0.0048
-};
-
-// 辅助函数：将金额转换为基准货币 (CNY)
-function convertToCNY(amount, currency) {
-  if (!amount || amount <= 0) return 0;
-  // 如果没有币种信息，默认视为 CNY
-  const code = currency || 'CNY';
-  const rate = EXCHANGE_RATES[code] || 1; 
-  return amount * rate;
-}
-
-function calculateMonthlyExpense(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const parts = getTimezoneDateParts(now, timezone);
-  const currentYear = parts.year;
-  const currentMonth = parts.month;
-
-  let amount = 0;
-
-  // 遍历所有订阅的支付历史
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      const paymentParts = getTimezoneDateParts(paymentDate, timezone);
-      if (paymentParts.year === currentYear && paymentParts.month === currentMonth) {
-        // 【核心修改】使用 convertToCNY 进行汇率转换
-        amount += convertToCNY(payment.amount, sub.currency);
-      }
-    });
-  });
-
-  // 计算上月数据用于趋势对比
-  const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-  const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-  let lastMonthAmount = 0;
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      const paymentParts = getTimezoneDateParts(paymentDate, timezone);
-      if (paymentParts.year === lastMonthYear && paymentParts.month === lastMonth) {
-        // 【核心修改】使用 convertToCNY 进行汇率转换
-        lastMonthAmount += convertToCNY(payment.amount, sub.currency);
-      }
-    });
-  });
-
-  let trend = 0;
-  let trendDirection = 'flat';
-  if (lastMonthAmount > 0) {
-    trend = Math.round(((amount - lastMonthAmount) / lastMonthAmount) * 100);
-    if (trend > 0) trendDirection = 'up';
-    else if (trend < 0) trendDirection = 'down';
-  } else if (amount > 0) {
-    // 上月无支出，本月有支出，视为增长
-    trend = 100;
-    trendDirection = 'up';
-  }
-
-  return { amount, trend: Math.abs(trend), trendDirection };
-}
-
-function calculateYearlyExpense(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const parts = getTimezoneDateParts(now, timezone);
-  const currentYear = parts.year;
-
-  let amount = 0;
-
-  // 遍历所有订阅的支付历史
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      const paymentParts = getTimezoneDateParts(paymentDate, timezone);
-      if (paymentParts.year === currentYear) {
-        // 【核心修改】使用 convertToCNY 进行汇率转换
-        amount += convertToCNY(payment.amount, sub.currency);
-      }
-    });
-  });
-
-  // 简单的月均计算：总额 / 当前月份（或者12，取决于您的统计逻辑，此处保持原逻辑）
-  const monthlyAverage = amount / parts.month; 
-  return { amount, monthlyAverage };
-}
-
-function getRecentPayments(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const sevenDaysAgo = new Date(now.getTime() - 7 * MS_PER_DAY);
-
-  const recentPayments = [];
-
-  // 遍历所有订阅的支付历史
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      if (paymentDate >= sevenDaysAgo && paymentDate <= now) {
-        recentPayments.push({
-          name: sub.name,
-          amount: payment.amount,
-          currency: sub.currency || 'CNY', // 【核心修改】传递币种给前端显示
-          customType: sub.customType,
-          paymentDate: payment.date,
-          note: payment.note
-        });
-      }
-    });
-  });
-
-  return recentPayments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
-}
-
-function getUpcomingRenewals(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const sevenDaysLater = new Date(now.getTime() + 7 * MS_PER_DAY);
-
-  return subscriptions
-    .filter(sub => {
-      if (!sub.isActive) return false;
-      const renewalDate = new Date(sub.expiryDate);
-      return renewalDate >= now && renewalDate <= sevenDaysLater;
-    })
-    .map(sub => {
-      const renewalDate = new Date(sub.expiryDate);
-      const daysUntilRenewal = Math.ceil((renewalDate - now) / MS_PER_DAY);
-      return {
-        name: sub.name,
-        amount: sub.amount || 0,
-        currency: sub.currency || 'CNY', // 【核心修改】传递币种给前端显示
-        customType: sub.customType,
-        renewalDate: sub.expiryDate,
-        daysUntilRenewal
-      };
-    })
-    .sort((a, b) => a.daysUntilRenewal - b.daysUntilRenewal);
-}
-
-function getExpenseByType(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const parts = getTimezoneDateParts(now, timezone);
-  const currentYear = parts.year;
-
-  const typeMap = {};
-  let total = 0;
-
-  // 遍历所有订阅的支付历史
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      const paymentParts = getTimezoneDateParts(paymentDate, timezone);
-      if (paymentParts.year === currentYear) {
-        const type = sub.customType || '未分类';
-        // 【核心修改】先转换为 CNY 再统计
-        const amountCNY = convertToCNY(payment.amount, sub.currency);
-        
-        typeMap[type] = (typeMap[type] || 0) + amountCNY;
-        total += amountCNY;
-      }
-    });
-  });
-
-  return Object.entries(typeMap)
-    .map(([type, amount]) => ({
-      type,
-      amount,
-      percentage: total > 0 ? Math.round((amount / total) * 100) : 0
-    }))
-    .sort((a, b) => b.amount - a.amount);
-}
-
-function getExpenseByCategory(subscriptions, timezone) {
-  const now = getCurrentTimeInTimezone(timezone);
-  const parts = getTimezoneDateParts(now, timezone);
-  const currentYear = parts.year;
-
-  const categoryMap = {};
-  let total = 0;
-
-  // 遍历所有订阅的支付历史
-  subscriptions.forEach(sub => {
-    const paymentHistory = sub.paymentHistory || [];
-    paymentHistory.forEach(payment => {
-      if (!payment.amount || payment.amount <= 0) return;
-      const paymentDate = new Date(payment.date);
-      const paymentParts = getTimezoneDateParts(paymentDate, timezone);
-      if (paymentParts.year === currentYear) {
-        const categories = sub.category ? sub.category.split(CATEGORY_SEPARATOR_REGEX).filter(c => c.trim()) : ['未分类'];
-
-        // 先转换为 CNY 再分配给各个分类
-        const amountCNY = convertToCNY(payment.amount, sub.currency);
-
-        categories.forEach(category => {
-          const cat = category.trim() || '未分类';
-          categoryMap[cat] = (categoryMap[cat] || 0) + amountCNY / categories.length;
-        });
-        total += amountCNY;
-      }
-    });
-  });
-
-  return Object.entries(categoryMap)
-    .map(([category, amount]) => ({
-      category,
-      amount,
-      percentage: total > 0 ? Math.round((amount / total) * 100) : 0
-    }))
-    .sort((a, b) => b.amount - a.amount);
-}
